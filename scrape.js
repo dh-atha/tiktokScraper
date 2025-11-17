@@ -79,10 +79,14 @@ async function scrapeTikTok(accountUrl, limit = 5) {
         const clean = (t) => t.replace(/[^a-zA-Z0-9 ]/g, "");
 
         const items = document.querySelectorAll(
-          'div[data-e2e="comment-level-1"] span'
+          'span[data-e2e="comment-level-1"]'
         );
 
-        return [...items]
+        const items2 = document.querySelectorAll(
+          'span[data-e2e="comment-level-2"]'
+        );
+
+        return [...items, ...items2]
           .map((el) => clean(el.textContent.trim()))
           .filter((text) => text.length > 2);
       });
@@ -130,6 +134,6 @@ async function saveCSV(rows, fileName) {
 // RUN SCRIPT
 (async () => {
   const account = "https://www.tiktok.com/@ittstangsel";
-  const result = await scrapeTikTok(account, 30);
+  const result = await scrapeTikTok(account, 20);
   await saveCSV(result, "itts_tiktok_latest.csv");
 })();
