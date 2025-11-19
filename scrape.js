@@ -58,7 +58,28 @@ async function scrapeTikTok(accountUrl, limit = 5) {
       .catch(() => "");
 
     const shares = await page
-      .$eval("strong[data-e2e='share-count']", (el) => el.textContent)
+      .$eval("strong[data-e2e='share-count']", (el) => {
+        var text = el.textContent;
+        if (text === "Share") return "0";
+        return text;
+      })
+      .catch(() => "");
+
+    const uploadDate = await page
+      .$eval(
+        "span[data-e2e='browser-nickname'] > span:nth-of-type(3)",
+        (el) => el.textContent
+      )
+      .catch(() => "");
+
+    const caption = await page
+      .$$eval("span[data-e2e='new-desc-span']", (spans) =>
+        spans
+          .map((s) => s.textContent.trim())
+          .filter((t) => t !== "")
+          .map((t) => t.replace(/^[",]+|[",]+$/g, "")) // ⬅ remove leading/trailing " and ,
+          .join(" ")
+      )
       .catch(() => "");
 
     // === LOAD COMMENTS (max 10, alphanumeric) ===
@@ -88,7 +109,8 @@ async function scrapeTikTok(accountUrl, limit = 5) {
 
         return [...items, ...items2]
           .map((el) => clean(el.textContent.trim()))
-          .filter((text) => text.length > 2);
+          .filter((text) => text.length > 2)
+          .map((t) => t.replace(/^[",]+|[",]+$/g, "")); // ⬅ remove leading/trailing " and ,
       });
     }
 
@@ -106,8 +128,10 @@ async function scrapeTikTok(accountUrl, limit = 5) {
 
     rows.push({
       video_url: link,
+      uploadDate,
       likes,
       shares,
+      caption,
       comments: [...comments].join(" | "),
     });
   }
@@ -121,8 +145,10 @@ async function saveCSV(rows, fileName) {
     path: fileName,
     header: [
       { id: "video_url", title: "video_url" },
+      { id: "uploadDate", title: "uploadDate" },
       { id: "likes", title: "likes" },
       { id: "shares", title: "shares" },
+      { id: "caption", title: "caption" },
       { id: "comments", title: "comments" },
     ],
   });
@@ -133,7 +159,8 @@ async function saveCSV(rows, fileName) {
 
 // RUN SCRIPT
 (async () => {
-  const account = "https://www.tiktok.com/@ittstangsel";
+  const username = "univbrawijaya";
+  const account = `https://www.tiktok.com/@${username}`;
   const result = await scrapeTikTok(account, 20);
-  await saveCSV(result, "itts_tiktok_latest.csv");
+  await saveCSV(result, `${username}_tiktok_latest.csv`);
 })();
